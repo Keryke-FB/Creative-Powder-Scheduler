@@ -1,0 +1,21 @@
+# Local Apps Script deployment binding
+.clasp.json
+
+# Local snapshots and source database exports
+*.accdb
+*.laccdb
+*.mdb
+*.ldb
+
+# Local secrets and environment files
+.env
+.env.*
+*.secret.*
+credentials*.json
+service-account*.json
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
