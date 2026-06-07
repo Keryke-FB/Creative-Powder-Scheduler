@@ -388,6 +388,7 @@ function importOpenOrderReports_(mode) {
   const imported = [];
   const skipped = [];
   const failed = [];
+  let added = 0;
   let updated = 0;
   let removed = 0;
 
@@ -395,29 +396,15 @@ function importOpenOrderReports_(mode) {
     const weeklySource = getWeeklyOpenOrderSource_();
     const rows = readWeeklyOpenOrderRows_(weeklySource);
     const existingImportedRows = getExistingOpenOrderImportRows_();
-    const existingByKey = bucketExistingOpenOrderRows_(existingImportedRows);
-    let added = 0;
+    if (existingImportedRows.length) {
+      deleteMasterRows_(existingImportedRows.map(row => row.rowNumber));
+      removed = existingImportedRows.length;
+    }
 
     rows.forEach(parsed => {
-      const bucket = existingByKey[parsed.importKey] || [];
-      if (bucket.length) {
-        const match = bucket.shift();
-        updateOpenOrderImportedRow_(match.rowNumber, match.status, parsed, batchId);
-        updated += 1;
-        return;
-      }
       appendMasterRow_(parsed, JSON.stringify(parsed), weeklySource.file, batchId);
       added += 1;
     });
-
-    const staleRows = Object.keys(existingByKey)
-      .reduce((all, key) => all.concat(existingByKey[key]), [])
-      .sort((a, b) => b.rowNumber - a.rowNumber);
-
-    if (staleRows.length) {
-      deleteMasterRows_(staleRows.map(row => row.rowNumber));
-      removed = staleRows.length;
-    }
 
     imported.push({ name: weeklySource.file.getName(), rows: added });
   } catch (error) {
