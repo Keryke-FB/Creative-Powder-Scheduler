@@ -279,6 +279,60 @@ function authorizeServices() {
   };
 }
 
+function setScriptProperties(properties) {
+  const allowed = [
+    'SPREADSHEET_ID',
+    'MASTER_SHEET_NAME',
+    'FLOOR_SHEET_NAME',
+    'PHOTO_FOLDER_ID',
+    'WEEKLY_OPEN_ORDERS_SPREADSHEET_ID',
+    'WEEKLY_OPEN_ORDERS_SHEET_NAME',
+    'POWDER_MASTER_SPREADSHEET_ID',
+    'POWDER_MASTER_SHEET_NAME',
+    'MASKED_PARTS_SPREADSHEET_ID',
+    'MASKED_PARTS_SHEET_NAME',
+    'MASKED_PARTS_FOLDER_ID',
+    'PROCESSED_FOLDER_NAME',
+    'REPORT_FOLDER_NAME',
+    'PROCESSED_REPORT_FOLDER_NAME',
+    'FORMER_SCHEDULES_FOLDER_NAME',
+    'REVIEW_STATUS',
+    'DEFAULT_STATUS',
+    'DIGEST_LIMIT',
+    'REPORT_IMPORT_LIMIT',
+    'GEMINI_MODEL',
+    'TIMEZONE'
+  ];
+  const props = PropertiesService.getScriptProperties();
+  Object.keys(properties || {}).forEach(key => {
+    if (!allowed.includes(key)) return;
+    const value = String(properties[key] || '').trim();
+    if (value) props.setProperty(key, value);
+  });
+  return getScriptPropertiesStatus();
+}
+
+function getScriptPropertiesStatus() {
+  const props = PropertiesService.getScriptProperties();
+  const keys = [
+    'SPREADSHEET_ID',
+    'PHOTO_FOLDER_ID',
+    'WEEKLY_OPEN_ORDERS_SPREADSHEET_ID',
+    'WEEKLY_OPEN_ORDERS_SHEET_NAME',
+    'POWDER_MASTER_SPREADSHEET_ID',
+    'MASKED_PARTS_SPREADSHEET_ID',
+    'MASKED_PARTS_FOLDER_ID',
+    'GEMINI_MODEL',
+    'TIMEZONE',
+    'GEMINI_API_KEY'
+  ];
+  return keys.reduce((status, key) => {
+    const value = props.getProperty(key);
+    status[key] = value ? 'set' : 'missing';
+    return status;
+  }, {});
+}
+
 function digestNewPhotos_(mode) {
   const processedFolderId = getOrCreateProcessedFolderId_();
   const known = getKnownKeys_();
