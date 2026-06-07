@@ -279,7 +279,7 @@
 
       table {
         width: 100%;
-        min-width: 1080px;
+        min-width: 760px;
         border-collapse: collapse;
       }
 
@@ -643,12 +643,7 @@
                 <th><button class="headBtn" data-sort-key="partNumber" type="button">Part Number<span class="sortMark"></span></button></th>
                 <th><button class="headBtn" data-sort-key="quantity" type="button">Qty<span class="sortMark"></span></button></th>
                 <th><button class="headBtn" data-sort-key="powder" type="button">Powder<span class="sortMark"></span></button></th>
-                <th><button class="headBtn" data-sort-key="dateReceived" type="button">Received<span class="sortMark"></span></button></th>
-                <th><button class="headBtn" data-sort-key="dueDate" type="button">Due<span class="sortMark"></span></button></th>
                 <th><button class="headBtn" data-sort-key="maskedStatus" type="button">Masked<span class="sortMark"></span></button></th>
-                <th><button class="headBtn" data-sort-key="reviewStatus" type="button">Review<span class="sortMark"></span></button></th>
-                <th><button class="headBtn" data-sort-key="sourcePhoto" type="button">Photo<span class="sortMark"></span></button></th>
-                <th id="actionsHead"><span class="headStatic">Actions</span></th>
               </tr>
             </thead>
             <tbody id="rows"></tbody>
@@ -1176,16 +1171,11 @@
           return matchesFilter && haystack.includes(query);
         });
         const sorted = sortRows(filtered);
-        const hasReviewActions = sorted.some(row => row.reviewStatus);
 
         rowsEl.innerHTML = sorted.map(rowTemplate).join('');
         emptyEl.hidden = sorted.length > 0;
-        document.querySelector('.tableWrap table').classList.toggle('hideActions', !hasReviewActions);
         rowsEl.querySelectorAll('select[data-row]').forEach(select => {
           select.addEventListener('change', event => changeStatus(event.target.dataset.row, event.target.value));
-        });
-        rowsEl.querySelectorAll('button[data-reviewed-row]').forEach(button => {
-          button.addEventListener('click', event => markRowReviewed(event.currentTarget.dataset.reviewedRow));
         });
         syncSortHeaders();
       }
@@ -1206,16 +1196,7 @@
             <td>${cellText(row.partNumber)}</td>
             <td>${cellText(row.quantity)}</td>
             <td>${cellText(row.powder)}</td>
-            <td>${cellText(row.dateReceived)}</td>
-            <td>${cellText(row.dueDate)}</td>
             <td>${row.maskedStatus ? '<span class="pill">Masked</span>' : ''}</td>
-            <td>${row.reviewStatus ? '<span class="pill review">Review</span>' : ''}</td>
-            <td>${photoLink(row)}</td>
-            <td>
-              <div class="rowActions">
-                ${row.reviewStatus ? `<button class="iconBtn" data-reviewed-row="${escapeHtml(row.rowNumber)}" type="button" title="Mark reviewed">OK</button>` : ''}
-              </div>
-            </td>
           </tr>
         `;
       }

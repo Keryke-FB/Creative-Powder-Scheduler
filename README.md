@@ -19,6 +19,17 @@ This project is the browser-dashboard and automatic intake layer for the Creativ
   - simple review filtering for low-confidence photo reads
   - a visible reader badge showing whether Gemini Vision or Drive OCR fallback is active
 
+The staff-facing browser table is intentionally narrow:
+
+- Status
+- Customer
+- Part Number
+- Quantity
+- Powder
+- Masked
+
+Powder and masked values are filled by matching the schedule part number against the configured powder master and masked parts spreadsheets.
+
 The shop handoff sorts by paint color, then hot priority, then customer so supervisors can keep the line in one color as long as possible while still seeing urgent jobs first.
 
 ## V2 Report Intake
