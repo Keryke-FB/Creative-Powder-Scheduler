@@ -411,32 +411,50 @@ function readWeeklyOpenOrderRows_(source) {
 function parseWeeklyOpenOrderValues_(values, file, powderLookup, maskedParts) {
   if (!values || values.length < 2) return [];
   const headers = values[0].map(header => normalizeHeader_(header));
-  const required = ['name', 'partnumber', 'quantity', 'dateshipped', 'recshipdate'];
-  const missing = required.filter(header => headers.indexOf(header) === -1);
+  const customerColumn = findHeaderColumn_(headers, ['name', 'customer']);
+  const partColumn = findHeaderColumn_(headers, ['partnumber']);
+  const quantityColumn = findHeaderColumn_(headers, ['quantity', 'partsreceivedbydept', 'partsleavingdept']);
+  const dueDateColumn = findHeaderColumn_(headers, ['dateshipped', 'duedate', 'shipdate']);
+  const receivedDateColumn = findHeaderColumn_(headers, ['recshipdate', 'partreceiveddate', 'datereceived', 'receiveddate']);
+  const jobColumn = findHeaderColumn_(headers, ['jobnumber']);
+  const poColumn = findHeaderColumn_(headers, ['ponumber', 'po']);
+  const descriptionColumn = findHeaderColumn_(headers, ['description', 'partdescription']);
+  const processColumn = findHeaderColumn_(headers, ['process', 'process.', 'baseprocessname', 'departementsused', 'departmentsused']);
+  const departmentColumn = findHeaderColumn_(headers, ['departmentcaptured', 'department', 'dept']);
+  const netQuantityColumn = findHeaderColumn_(headers, ['netquantity', 'partsleavingdept']);
+  const powderColumn = findHeaderColumn_(headers, ['powder', 'powdercodecolor', 'powdercode', 'color']);
+  const requiredColumns = {
+    Customer: customerColumn,
+    PartNumber: partColumn,
+    Quantity: quantityColumn,
+    ReceivedDate: receivedDateColumn
+  };
+  const missing = Object.keys(requiredColumns).filter(name => requiredColumns[name] < 0);
   if (missing.length) {
     throw new Error('Weekly open-order sheet is missing expected columns: ' + missing.join(', '));
   }
 
-  const column = name => headers.indexOf(normalizeHeader_(name));
   const rows = [];
   const seenBaseCounts = {};
   const captureDate = Utilities.formatDate(new Date(), CONFIG.timezone, 'yyyy-MM-dd');
 
   for (let index = 1; index < values.length; index += 1) {
     const row = values[index];
-    const customer = cleanText_(row[column('name')]);
-    const partNumber = cleanText_(row[column('partnumber')]);
-    const printedQuantity = cleanText_(row[column('quantity')]);
-    const dueDate = cleanText_(row[column('dateshipped')]);
-    const dateReceived = cleanText_(row[column('recshipdate')]);
+    const customer = cleanText_(row[customerColumn]);
+    const partNumber = cleanText_(row[partColumn]);
+    const printedQuantity = cleanText_(row[quantityColumn]);
+    const dueDate = dueDateColumn >= 0 ? cleanText_(row[dueDateColumn]) : '';
+    const dateReceived = cleanText_(row[receivedDateColumn]);
     if (!customer && !partNumber && !printedQuantity && !dueDate && !dateReceived) continue;
     if (!customer || !partNumber) continue;
 
     const powderEntry = getPowderMasterEntry_(partNumber, powderLookup);
-    const sourcePowder = column('powder') >= 0 ? cleanText_(row[column('powder')]) : '';
+    const sourcePowder = powderColumn >= 0 ? cleanText_(row[powderColumn]) : '';
     const powder = normalizePowderCode_(sourcePowder || (powderEntry ? powderEntry.powder : ''));
     const baseKey = buildOpenOrderBaseKey_(customer, partNumber, printedQuantity, dateReceived, dueDate);
     seenBaseCounts[baseKey] = (seenBaseCounts[baseKey] || 0) + 1;
+    const process = processColumn >= 0 ? cleanText_(row[processColumn]) : '';
+    const department = departmentColumn >= 0 ? cleanText_(row[departmentColumn]) : '';
 
     rows.push({
       status: CONFIG.defaultStatus,
@@ -447,12 +465,12 @@ function parseWeeklyOpenOrderValues_(values, file, powderLookup, maskedParts) {
       dateReceived,
       dueDate,
       captureDate,
-      controlNumber: column('jobnumber') >= 0 ? cleanText_(row[column('jobnumber')]) : '',
-      partDescription: column('description') >= 0 ? cleanText_(row[column('description')]) : '',
-      process: column('process') >= 0 ? cleanText_(row[column('process')]) : '',
-      netQuantity: column('netquantity') >= 0 ? cleanText_(row[column('netquantity')]) : '',
+      controlNumber: jobColumn >= 0 ? cleanText_(row[jobColumn]) : '',
+      partDescription: descriptionColumn >= 0 ? cleanText_(row[descriptionColumn]) : '',
+      process: [department, process].filter(Boolean).join(' / '),
+      netQuantity: netQuantityColumn >= 0 ? cleanText_(row[netQuantityColumn]) : '',
       filmBuildSpec: '',
-      jobLotNumber: column('ponumber') >= 0 ? cleanText_(row[column('ponumber')]) : '',
+      jobLotNumber: poColumn >= 0 ? cleanText_(row[poColumn]) : '',
       toolingText: '',
       specialHandling: '',
       conflictFlag: '',
@@ -466,6 +484,19 @@ function parseWeeklyOpenOrderValues_(values, file, powderLookup, maskedParts) {
     });
   }
   return rows;
+}
+
+function findHeaderColumn_(headers, aliases) {
+  const normalizedAliases = aliases.map(alias => normalizeHeader_(alias));
+  for (const alias of normalizedAliases) {
+    const exact = headers.indexOf(alias);
+    if (exact >= 0) return exact;
+  }
+  for (const alias of normalizedAliases) {
+    const containing = headers.findIndex(header => header.indexOf(alias) >= 0);
+    if (containing >= 0) return containing;
+  }
+  return -1;
 }
 
 function getPowderMasterLookup_() {

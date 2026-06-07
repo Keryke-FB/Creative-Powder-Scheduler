@@ -32,6 +32,20 @@ The normal intake path is now the open-order report dump:
 
 The report importer treats `JobNumber + Part Number` as the duplicate key because one job can contain multiple part lines.
 
+The importer also accepts the current powder schedule database export shape:
+
+- `Part Received Date`
+- `JobNumber`
+- `PO#`
+- `PartNumber`
+- `Parts Received by Dept`
+- `Parts Leaving Dept`
+- `Department Captured`
+- `Customer`
+- `Departements Used...`
+
+For that feed, set `WEEKLY_OPEN_ORDERS_SHEET_NAME` to `Powder Schedule Database`.
+
 ## Runtime Configuration
 
 The public repository does not hardcode company Google Drive or Sheet IDs.
