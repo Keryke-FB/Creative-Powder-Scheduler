@@ -395,10 +395,10 @@ function importOpenOrderReports_(mode) {
   try {
     const weeklySource = getWeeklyOpenOrderSource_();
     const rows = readWeeklyOpenOrderRows_(weeklySource);
-    const existingImportedRows = getExistingOpenOrderImportRows_();
-    if (existingImportedRows.length) {
-      deleteMasterRows_(existingImportedRows.map(row => row.rowNumber));
-      removed = existingImportedRows.length;
+    const existingOpenRows = getExistingOpenScheduleRows_();
+    if (existingOpenRows.length) {
+      deleteMasterRows_(existingOpenRows.map(row => row.rowNumber));
+      removed = existingOpenRows.length;
     }
 
     rows.forEach(parsed => {
@@ -463,7 +463,7 @@ function parseWeeklyOpenOrderValues_(values, file, powderLookup, maskedParts) {
   const processColumn = findHeaderColumn_(headers, ['process', 'process.', 'baseprocessname', 'departementsused', 'departmentsused']);
   const departmentColumn = findHeaderColumn_(headers, ['departmentcaptured', 'department', 'dept']);
   const netQuantityColumn = findHeaderColumn_(headers, ['netquantity', 'partsleavingdept']);
-  const powderColumn = findHeaderColumn_(headers, ['powder', 'powdercodecolor', 'powdercode', 'color']);
+  const powderColumn = findPowderHeaderColumn_(headers);
   const requiredColumns = {
     Customer: customerColumn,
     PartNumber: partColumn,
@@ -540,6 +540,27 @@ function findHeaderColumn_(headers, aliases) {
   return -1;
 }
 
+function findExactHeaderColumn_(headers, aliases) {
+  const normalizedAliases = aliases.map(alias => normalizeHeader_(alias));
+  for (const alias of normalizedAliases) {
+    const exact = headers.indexOf(alias);
+    if (exact >= 0) return exact;
+  }
+  return -1;
+}
+
+function findPowderHeaderColumn_(headers) {
+  return findExactHeaderColumn_(headers, [
+    'powder',
+    'powdercolor',
+    'powdercode',
+    'powdercodecolor',
+    'powdercodeandcolor',
+    'paintcolor',
+    'color'
+  ]);
+}
+
 function getPowderMasterLookup_() {
   const ss = SpreadsheetApp.openById(CONFIG.powderMasterSpreadsheetId);
   const sheet = ss.getSheetByName(CONFIG.powderMasterSheetName) || ss.getSheets()[0];
@@ -547,8 +568,8 @@ function getPowderMasterLookup_() {
   const lookup = {};
   if (!values || values.length < 2) return lookup;
   const headers = values[0].map(header => normalizeHeader_(header));
-  const partIndex = headers.indexOf('partnumber');
-  const powderIndex = headers.indexOf('powder');
+  const partIndex = findHeaderColumn_(headers, ['partnumber', 'part']);
+  const powderIndex = findPowderHeaderColumn_(headers);
   if (partIndex === -1 || powderIndex === -1) {
     throw new Error('Powder Parts Master is missing Part Number or Powder columns.');
   }
@@ -1286,6 +1307,12 @@ function getKnownKeys_() {
 function getExistingOpenOrderImportRows_() {
   return readMasterRows_()
     .filter(row => isOpenRow_(row) && isOpenOrderImportRow_(row))
+    .sort((a, b) => a.rowNumber - b.rowNumber);
+}
+
+function getExistingOpenScheduleRows_() {
+  return readMasterRows_()
+    .filter(row => isOpenRow_(row))
     .sort((a, b) => a.rowNumber - b.rowNumber);
 }
 
