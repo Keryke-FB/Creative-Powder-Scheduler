@@ -152,6 +152,13 @@
         background: var(--blue);
       }
 
+      .btn.printView {
+        border-color: #b7791f;
+        background: #d89a24;
+        color: #1f1605;
+        font-weight: 700;
+      }
+
       .btn.danger {
         border-color: #9f241c;
         background: #b83a2e;
@@ -529,17 +536,33 @@
         font-weight: 800;
       }
 
-      .printRows td:nth-child(2),
-      .printRows th:nth-child(2),
-      .printRows td:nth-child(5),
-      .printRows th:nth-child(5),
-      .printRows td:nth-child(6),
-      .printRows th:nth-child(6) {
+      .printRows:not(.viewRows) td:nth-child(2),
+      .printRows:not(.viewRows) th:nth-child(2),
+      .printRows:not(.viewRows) td:nth-child(5),
+      .printRows:not(.viewRows) th:nth-child(5),
+      .printRows:not(.viewRows) td:nth-child(6),
+      .printRows:not(.viewRows) th:nth-child(6) {
         white-space: nowrap;
       }
 
-      .printRows td:nth-child(6),
-      .printRows th:nth-child(6) {
+      .printRows:not(.viewRows) td:nth-child(6),
+      .printRows:not(.viewRows) th:nth-child(6) {
+        text-align: right;
+      }
+
+      .printRows.viewRows td:nth-child(1),
+      .printRows.viewRows th:nth-child(1),
+      .printRows.viewRows td:nth-child(4),
+      .printRows.viewRows th:nth-child(4),
+      .printRows.viewRows td:nth-child(5),
+      .printRows.viewRows th:nth-child(5),
+      .printRows.viewRows td:nth-child(7),
+      .printRows.viewRows th:nth-child(7) {
+        white-space: nowrap;
+      }
+
+      .printRows.viewRows td:nth-child(5),
+      .printRows.viewRows th:nth-child(5) {
         text-align: right;
       }
 
@@ -549,6 +572,13 @@
       .printRows col.part { width: 22%; }
       .printRows col.received { width: 15%; }
       .printRows col.qty { width: 11%; }
+      .printRows.viewRows col.status { width: 12%; }
+      .printRows.viewRows col.customer { width: 24%; }
+      .printRows.viewRows col.part { width: 17%; }
+      .printRows.viewRows col.received { width: 13%; }
+      .printRows.viewRows col.qty { width: 8%; }
+      .printRows.viewRows col.powder { width: 16%; }
+      .printRows.viewRows col.masked { width: 10%; }
 
       @media (max-width: 760px) {
         .topbar {
@@ -618,6 +648,7 @@
         <div class="actions">
           <button class="btn" id="importReportsBtn" type="button">Import Open Orders</button>
           <button class="btn" id="digestBtn" type="button">Digest Photos Now</button>
+          <button class="btn printView" id="printViewBtn" type="button">Print Current View</button>
           <button class="btn shop" id="shopBtn" type="button">Complete Send to Shop</button>
           <button class="btn danger" id="finalizeBtn" type="button" disabled>Finalize Batch Archive</button>
           <div class="menuWrap">
@@ -688,6 +719,7 @@
     <script>
       const state = {
         rows: [],
+        visibleRows: [],
         filter: 'all',
         search: '',
         busy: false,
@@ -766,6 +798,7 @@
       const toastEl = $('#toast');
       const importReportsBtn = $('#importReportsBtn');
       const digestBtn = $('#digestBtn');
+      const printViewBtn = $('#printViewBtn');
       const toolsBtn = $('#toolsBtn');
       const toolsMenu = $('#toolsMenu');
       const repairBtn = $('#repairBtn');
@@ -1112,6 +1145,78 @@
         `;
       }
 
+      function renderCurrentViewPrintTemplate(rows) {
+        const filterLabel = state.filter === 'all'
+          ? 'All rows'
+          : state.filter === 'review'
+            ? 'Needs Review'
+            : state.filter;
+        const searchLabel = state.search ? `Search: ${state.search}` : 'No search';
+        printPage.innerHTML = `
+          <section class="printHead">
+            <div>
+              <h2 class="printTitle">Creative Coatings Current Schedule View</h2>
+              <div class="subtitle">Printed from the current browser filter, search, and sort</div>
+            </div>
+            <div class="printMeta">
+              <div>${new Date().toLocaleString()}</div>
+              <div>${escapeHtml(filterLabel)} / ${escapeHtml(searchLabel)}</div>
+              <div>${rows.length} rows</div>
+            </div>
+          </section>
+          <table class="printRows viewRows">
+            <colgroup>
+              <col class="status">
+              <col class="customer">
+              <col class="part">
+              <col class="received">
+              <col class="qty">
+              <col class="powder">
+              <col class="masked">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Customer</th>
+                <th>Part Number</th>
+                <th>Date Received</th>
+                <th>Qty</th>
+                <th>Powder</th>
+                <th>Masked</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(currentViewPrintRowTemplate).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      function currentViewPrintRowTemplate(row) {
+        return `
+          <tr class="${row.status === 'Hot List' ? 'hotPrint' : ''}">
+            <td>${escapeHtml(row.status)}</td>
+            <td>${escapeHtml(row.customer)}</td>
+            <td>${escapeHtml(row.partNumber)}</td>
+            <td>${escapeHtml(row.dateReceived)}</td>
+            <td>${escapeHtml(row.quantity)}</td>
+            <td>${escapeHtml(row.powder)}</td>
+            <td>${row.maskedStatus ? 'Masked' : ''}</td>
+          </tr>
+        `;
+      }
+
+      function printCurrentView() {
+        const rows = state.visibleRows || [];
+        if (!rows.length) {
+          toast('Nothing visible to print.');
+          return;
+        }
+        renderCurrentViewPrintTemplate(rows);
+        openPrintOverlay();
+        toast(`Prepared ${rows.length} visible rows for print.`);
+      }
+
       function openPrintOverlay() {
         printOverlay.classList.add('open');
         printOverlay.setAttribute('aria-hidden', 'false');
@@ -1192,6 +1297,7 @@
           return matchesFilter && haystack.includes(query);
         });
         const sorted = sortRows(filtered);
+        state.visibleRows = sorted;
 
         rowsEl.innerHTML = sorted.map(rowTemplate).join('');
         emptyEl.hidden = sorted.length > 0;
@@ -1277,6 +1383,7 @@
         const canFinalize = !finalizeBtn.disabled;
         importReportsBtn.disabled = busy;
         digestBtn.disabled = busy;
+        printViewBtn.disabled = busy;
         toolsBtn.disabled = busy;
         repairBtn.disabled = busy;
         shopBtn.disabled = busy;
@@ -1292,6 +1399,7 @@
 
       importReportsBtn.addEventListener('click', importOpenOrders);
       digestBtn.addEventListener('click', digestNow);
+      printViewBtn.addEventListener('click', printCurrentView);
       toolsBtn.addEventListener('click', () => toggleToolsMenu());
       repairBtn.addEventListener('click', () => {
         toggleToolsMenu(false);
