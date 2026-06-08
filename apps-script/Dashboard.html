@@ -279,7 +279,7 @@
 
       table {
         width: 100%;
-        min-width: 760px;
+        min-width: 880px;
         border-collapse: collapse;
       }
 
@@ -505,16 +505,18 @@
       .printRows th,
       .printRows td {
         position: static;
-        padding: 8px 10px;
-        font-size: 13px;
+        padding: 7px 8px;
+        font-size: 12px;
         background: #fff;
-        overflow-wrap: anywhere;
+        overflow-wrap: normal;
         word-break: normal;
       }
 
       .printRows th {
         color: var(--muted);
         background: #fbfcfa;
+        text-align: left;
+        white-space: nowrap;
       }
 
       .printRows tr.hotPrint td:first-child {
@@ -527,11 +529,26 @@
         font-weight: 800;
       }
 
-      .printRows col.paint { width: 24%; }
-      .printRows col.hot { width: 9%; }
-      .printRows col.customer { width: 31%; }
-      .printRows col.part { width: 24%; }
-      .printRows col.qty { width: 12%; }
+      .printRows td:nth-child(2),
+      .printRows th:nth-child(2),
+      .printRows td:nth-child(5),
+      .printRows th:nth-child(5),
+      .printRows td:nth-child(6),
+      .printRows th:nth-child(6) {
+        white-space: nowrap;
+      }
+
+      .printRows td:nth-child(6),
+      .printRows th:nth-child(6) {
+        text-align: right;
+      }
+
+      .printRows col.paint { width: 18%; }
+      .printRows col.hot { width: 7%; }
+      .printRows col.customer { width: 27%; }
+      .printRows col.part { width: 22%; }
+      .printRows col.received { width: 15%; }
+      .printRows col.qty { width: 11%; }
 
       @media (max-width: 760px) {
         .topbar {
@@ -641,6 +658,7 @@
                 <th><button class="headBtn" data-sort-key="status" type="button">Status<span class="sortMark"></span></button></th>
                 <th><button class="headBtn" data-sort-key="customer" type="button">Customer<span class="sortMark"></span></button></th>
                 <th><button class="headBtn" data-sort-key="partNumber" type="button">Part Number<span class="sortMark"></span></button></th>
+                <th><button class="headBtn" data-sort-key="dateReceived" type="button">Date Received<span class="sortMark"></span></button></th>
                 <th><button class="headBtn" data-sort-key="quantity" type="button">Qty<span class="sortMark"></span></button></th>
                 <th><button class="headBtn" data-sort-key="powder" type="button">Powder<span class="sortMark"></span></button></th>
                 <th><button class="headBtn" data-sort-key="maskedStatus" type="button">Masked<span class="sortMark"></span></button></th>
@@ -1059,6 +1077,7 @@
                 <col class="hot">
                 <col class="customer">
                 <col class="part">
+                <col class="received">
                 <col class="qty">
               </colgroup>
               <thead>
@@ -1067,6 +1086,7 @@
                   <th>Hot</th>
                   <th>Customer</th>
                   <th>Part Number</th>
+                  <th>Date Received</th>
                   <th>Qty</th>
                 </tr>
               </thead>
@@ -1086,6 +1106,7 @@
             <td>${hot}</td>
             <td>${escapeHtml(row.customer)}</td>
             <td>${escapeHtml(row.partNumber)}</td>
+            <td>${escapeHtml(row.dateReceived)}</td>
             <td>${escapeHtml(row.quantity)}</td>
           </tr>
         `;
@@ -1194,6 +1215,7 @@
             </td>
             <td>${cellText(row.customer)}</td>
             <td>${cellText(row.partNumber)}</td>
+            <td>${cellText(row.dateReceived)}</td>
             <td>${cellText(row.quantity)}</td>
             <td>${cellText(row.powder)}</td>
             <td>${row.maskedStatus ? '<span class="pill">Masked</span>' : ''}</td>

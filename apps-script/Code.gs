@@ -62,7 +62,7 @@ const MASTER_HEADERS = [
   'Masked'
 ];
 
-const FLOOR_HEADERS = ['Paint Color', 'Hot', 'Customer', 'Part Number', 'Quantity', 'Due Date', 'Control'];
+const FLOOR_HEADERS = ['Paint Color', 'Hot', 'Customer', 'Part Number', 'Date Received', 'Quantity', 'Due Date', 'Control'];
 const OPEN_STATUSES = ['On Hold', 'Run Tomorrow', 'Hot List'];
 
 function doGet() {
@@ -1072,6 +1072,7 @@ function ensureFloorSheet_() {
       CONFIG.masterSheetName + '\'!A2:A="Hot List","HOT",""),\'' +
       CONFIG.masterSheetName + '\'!B2:B,\'' +
       CONFIG.masterSheetName + '\'!C2:C,\'' +
+      CONFIG.masterSheetName + '\'!F2:F,\'' +
       CONFIG.masterSheetName + '\'!D2:D,\'' +
       CONFIG.masterSheetName + '\'!G2:G,\'' +
       CONFIG.masterSheetName + '\'!I2:I},((\'' +
@@ -1095,11 +1096,11 @@ function createScheduleSnapshot_(shopRows, batchId, timestamp) {
   sheet.setName('Floor Schedule');
 
   const values = [
-    ['Creative Coatings Floor Schedule', '', '', '', '', '', ''],
-    ['Schedule Date', dateStamp, '', '', '', '', ''],
-    ['Shop Batch', batchId, '', '', '', '', ''],
-    ['Sent Timestamp', timestamp, '', '', '', '', ''],
-    ['', '', '', '', '', '', ''],
+    ['Creative Coatings Floor Schedule', '', '', '', '', '', '', ''],
+    ['Schedule Date', dateStamp, '', '', '', '', '', ''],
+    ['Shop Batch', batchId, '', '', '', '', '', ''],
+    ['Sent Timestamp', timestamp, '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
     FLOOR_HEADERS
   ];
   shopRows.forEach(row => {
@@ -1108,6 +1109,7 @@ function createScheduleSnapshot_(shopRows, batchId, timestamp) {
       row.status === 'Hot List' ? 'HOT' : '',
       row.customer,
       row.partNumber,
+      row.dateReceived,
       row.quantity,
       row.dueDate,
       row.controlNumber
