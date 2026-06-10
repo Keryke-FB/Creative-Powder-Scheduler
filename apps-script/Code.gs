@@ -8,16 +8,23 @@ function numberConfigValue_(key, fallback) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+const SCHEDULE_SPREADSHEET_ID = '1kUxvKYVpNp4fhqflmvnT84jqRv2wCuyfK_sGKYJZIyE';
+const PHOTO_FOLDER_ID = '1_Iqi9vZ4jgrGA7PjQ7jz0sQo2ifCrjcV';
+const POWDER_MASTER_SPREADSHEET_ID = '1ynHqzlGYhwkbziBd9OgUINpsiafUsg6ueP0fOMn2fAk';
+const MASKED_PARTS_SPREADSHEET_ID = '1FMNFiqvfZP8znVApXDXg1K6be_wD5zf9cD4WmwqrmWU';
+const CURRENT_ACTIVITY_SOURCE_SPREADSHEET_ID = '1AUIf0FV4ddeVIgO0Uhb-f4u4HaTvhBrCAA5fkGQb2bk';
+const CURRENT_ACTIVITY_SOURCE_SHEET_NAME = 'Activity';
+
 const CONFIG = {
-  spreadsheetId: configValue_('SPREADSHEET_ID', ''),
+  spreadsheetId: configValue_('SPREADSHEET_ID', SCHEDULE_SPREADSHEET_ID),
   masterSheetName: configValue_('MASTER_SHEET_NAME', 'Master Capture'),
   floorSheetName: configValue_('FLOOR_SHEET_NAME', 'Floor Schedule'),
-  photoFolderId: configValue_('PHOTO_FOLDER_ID', ''),
-  weeklyOpenOrdersSpreadsheetId: configValue_('WEEKLY_OPEN_ORDERS_SPREADSHEET_ID', ''),
-  weeklyOpenOrdersSheetName: configValue_('WEEKLY_OPEN_ORDERS_SHEET_NAME', ''),
-  powderMasterSpreadsheetId: configValue_('POWDER_MASTER_SPREADSHEET_ID', ''),
+  photoFolderId: configValue_('PHOTO_FOLDER_ID', PHOTO_FOLDER_ID),
+  weeklyOpenOrdersSpreadsheetId: CURRENT_ACTIVITY_SOURCE_SPREADSHEET_ID,
+  weeklyOpenOrdersSheetName: CURRENT_ACTIVITY_SOURCE_SHEET_NAME,
+  powderMasterSpreadsheetId: configValue_('POWDER_MASTER_SPREADSHEET_ID', POWDER_MASTER_SPREADSHEET_ID),
   powderMasterSheetName: configValue_('POWDER_MASTER_SHEET_NAME', 'Powder Master'),
-  maskedPartsSpreadsheetId: configValue_('MASKED_PARTS_SPREADSHEET_ID', ''),
+  maskedPartsSpreadsheetId: configValue_('MASKED_PARTS_SPREADSHEET_ID', MASKED_PARTS_SPREADSHEET_ID),
   maskedPartsSheetName: configValue_('MASKED_PARTS_SHEET_NAME', 'Sheet1'),
   processedFolderName: configValue_('PROCESSED_FOLDER_NAME', 'Processed'),
   reportFolderName: configValue_('REPORT_FOLDER_NAME', 'Open Order Reports'),
@@ -401,10 +408,8 @@ function importOpenOrderReports_(mode) {
       removed = existingOpenRows.length;
     }
 
-    rows.forEach(parsed => {
-      appendMasterRow_(parsed, JSON.stringify(parsed), weeklySource.file, batchId);
-      added += 1;
-    });
+    appendMasterRows_(rows, weeklySource.file, batchId);
+    added = rows.length;
 
     imported.push({ name: weeklySource.file.getName(), rows: added });
   } catch (error) {
@@ -454,15 +459,16 @@ function parseWeeklyOpenOrderValues_(values, file, powderLookup, maskedParts) {
   const headers = values[0].map(header => normalizeHeader_(header));
   const customerColumn = findHeaderColumn_(headers, ['name', 'customer']);
   const partColumn = findHeaderColumn_(headers, ['partnumber']);
-  const quantityColumn = findHeaderColumn_(headers, ['quantity', 'partsreceivedbydept', 'partsleavingdept']);
+  const quantityColumn = findHeaderColumn_(headers, ['quantity', 'quantityunloaded', 'partsreceivedbydept', 'partsleavingdept']);
   const dueDateColumn = findHeaderColumn_(headers, ['dateshipped', 'duedate', 'shipdate']);
-  const receivedDateColumn = findHeaderColumn_(headers, ['recshipdate', 'partreceiveddate', 'datereceived', 'receiveddate']);
+  const captureDateColumn = findHeaderColumn_(headers, ['capturedate', 'capturedatetime']);
+  const receivedDateColumn = findHeaderColumn_(headers, ['recshipdate', 'partreceiveddate', 'datereceived', 'receiveddate', 'capturedate']);
   const jobColumn = findHeaderColumn_(headers, ['jobnumber']);
   const poColumn = findHeaderColumn_(headers, ['ponumber', 'po']);
   const descriptionColumn = findHeaderColumn_(headers, ['description', 'partdescription']);
   const processColumn = findHeaderColumn_(headers, ['process', 'process.', 'baseprocessname', 'departementsused', 'departmentsused']);
-  const departmentColumn = findHeaderColumn_(headers, ['departmentcaptured', 'department', 'dept']);
-  const netQuantityColumn = findHeaderColumn_(headers, ['netquantity', 'partsleavingdept']);
+  const departmentColumn = findHeaderColumn_(headers, ['lastsigneddepartment', 'departmentcaptured', 'department', 'dept']);
+  const netQuantityColumn = findHeaderColumn_(headers, ['netquantity', 'quantityunloaded', 'partsleavingdept']);
   const powderColumn = findPowderHeaderColumn_(headers);
   const requiredColumns = {
     Customer: customerColumn,
@@ -477,7 +483,7 @@ function parseWeeklyOpenOrderValues_(values, file, powderLookup, maskedParts) {
 
   const rows = [];
   const seenBaseCounts = {};
-  const captureDate = Utilities.formatDate(new Date(), CONFIG.timezone, 'yyyy-MM-dd');
+  const importDate = Utilities.formatDate(new Date(), CONFIG.timezone, 'yyyy-MM-dd');
 
   for (let index = 1; index < values.length; index += 1) {
     const row = values[index];
@@ -486,6 +492,7 @@ function parseWeeklyOpenOrderValues_(values, file, powderLookup, maskedParts) {
     const printedQuantity = cleanText_(row[quantityColumn]);
     const dueDate = dueDateColumn >= 0 ? cleanText_(row[dueDateColumn]) : '';
     const dateReceived = cleanText_(row[receivedDateColumn]);
+    const captureDate = captureDateColumn >= 0 ? cleanText_(row[captureDateColumn]) : dateReceived;
     if (!customer && !partNumber && !printedQuantity && !dueDate && !dateReceived) continue;
     if (!customer || !partNumber) continue;
 
@@ -494,8 +501,8 @@ function parseWeeklyOpenOrderValues_(values, file, powderLookup, maskedParts) {
     const powder = normalizePowderCode_(sourcePowder || (powderEntry ? powderEntry.powder : ''));
     const baseKey = buildOpenOrderBaseKey_(customer, partNumber, printedQuantity, dateReceived, dueDate);
     seenBaseCounts[baseKey] = (seenBaseCounts[baseKey] || 0) + 1;
-    const process = processColumn >= 0 ? cleanText_(row[processColumn]) : '';
     const department = departmentColumn >= 0 ? cleanText_(row[departmentColumn]) : '';
+    const process = processColumn >= 0 ? cleanText_(row[processColumn]) : '';
 
     rows.push({
       status: CONFIG.defaultStatus,
@@ -505,10 +512,10 @@ function parseWeeklyOpenOrderValues_(values, file, powderLookup, maskedParts) {
       powder,
       dateReceived,
       dueDate,
-      captureDate,
+      captureDate: captureDate || importDate,
       controlNumber: jobColumn >= 0 ? cleanText_(row[jobColumn]) : '',
       partDescription: descriptionColumn >= 0 ? cleanText_(row[descriptionColumn]) : '',
-      process: [department, process].filter(Boolean).join(' / '),
+      process: department || process,
       netQuantity: netQuantityColumn >= 0 ? cleanText_(row[netQuantityColumn]) : '',
       filmBuildSpec: '',
       jobLotNumber: poColumn >= 0 ? cleanText_(row[poColumn]) : '',
@@ -940,9 +947,22 @@ function parseTravelerText_(text, file) {
 
 function appendMasterRow_(parsed, ocrText, file, batchId) {
   const sheet = getMasterSheet_();
+  sheet.appendRow(buildMasterRowValues_(parsed, ocrText, file, batchId, parsed.status));
+}
+
+function appendMasterRows_(parsedRows, file, batchId) {
+  if (!parsedRows.length) return;
+  const sheet = getMasterSheet_();
+  const startRow = sheet.getLastRow() + 1;
+  ensureSheetSize_(sheet, startRow + parsedRows.length - 1, MASTER_HEADERS.length);
+  const rows = parsedRows.map(parsed => buildMasterRowValues_(parsed, JSON.stringify(parsed), file, batchId, parsed.status));
+  sheet.getRange(startRow, 1, rows.length, MASTER_HEADERS.length).setValues(rows);
+}
+
+function buildMasterRowValues_(parsed, ocrText, file, batchId, status) {
   const sourceLabel = parsed.sourceLabel || file.getName();
-  const row = [
-    parsed.status,
+  return [
+    status,
     parsed.customer,
     parsed.partNumber,
     parsed.printedQuantity,
@@ -970,41 +990,13 @@ function appendMasterRow_(parsed, ocrText, file, batchId) {
     '',
     parsed.maskedStatus || ''
   ];
-  sheet.appendRow(row);
 }
 
 function updateOpenOrderImportedRow_(rowNumber, preservedStatus, parsed, batchId) {
   const sheet = getMasterSheet_();
-  const sourceLabel = parsed.sourceLabel || 'Weekly Open Orders';
-  const row = [[
-    preservedStatus || CONFIG.defaultStatus,
-    parsed.customer,
-    parsed.partNumber,
-    parsed.printedQuantity,
-    normalizePowderCode_(parsed.powder),
-    parsed.dateReceived,
-    parsed.dueDate,
-    parsed.captureDate,
-    parsed.controlNumber,
-    parsed.partDescription,
-    parsed.process,
-    parsed.netQuantity,
-    parsed.filmBuildSpec,
-    parsed.jobLotNumber,
-    parsed.toolingText,
-    parsed.specialHandling,
-    parsed.conflictFlag,
-    parsed.notes,
-    '=HYPERLINK("' + parsed.sourcePhotoUrl + '","' + String(sourceLabel || '').replace(/"/g, '""') + '")',
-    Utilities.formatDate(new Date(), CONFIG.timezone, 'yyyy-MM-dd HH:mm:ss'),
-    parsed.sourcePhotoId,
-    JSON.stringify(parsed),
-    parsed.reviewStatus,
-    batchId,
-    '',
-    '',
-    parsed.maskedStatus || ''
-  ]];
+  const row = [buildMasterRowValues_(parsed, JSON.stringify(parsed), {
+    getName: () => 'Weekly Open Orders'
+  }, batchId, preservedStatus || CONFIG.defaultStatus)];
   sheet.getRange(rowNumber, 1, 1, MASTER_HEADERS.length).setValues(row);
 }
 

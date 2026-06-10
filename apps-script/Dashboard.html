@@ -286,7 +286,7 @@
 
       table {
         width: 100%;
-        min-width: 880px;
+        min-width: 1080px;
         border-collapse: collapse;
       }
 
@@ -554,15 +554,15 @@
       .printRows.viewRows th:nth-child(1),
       .printRows.viewRows td:nth-child(4),
       .printRows.viewRows th:nth-child(4),
-      .printRows.viewRows td:nth-child(5),
-      .printRows.viewRows th:nth-child(5),
-      .printRows.viewRows td:nth-child(7),
-      .printRows.viewRows th:nth-child(7) {
+      .printRows.viewRows td:nth-child(6),
+      .printRows.viewRows th:nth-child(6),
+      .printRows.viewRows td:nth-child(8),
+      .printRows.viewRows th:nth-child(8) {
         white-space: nowrap;
       }
 
-      .printRows.viewRows td:nth-child(5),
-      .printRows.viewRows th:nth-child(5) {
+      .printRows.viewRows td:nth-child(6),
+      .printRows.viewRows th:nth-child(6) {
         text-align: right;
       }
 
@@ -572,13 +572,14 @@
       .printRows col.part { width: 22%; }
       .printRows col.received { width: 15%; }
       .printRows col.qty { width: 11%; }
-      .printRows.viewRows col.status { width: 12%; }
-      .printRows.viewRows col.customer { width: 24%; }
-      .printRows.viewRows col.part { width: 17%; }
-      .printRows.viewRows col.received { width: 13%; }
+      .printRows.viewRows col.status { width: 11%; }
+      .printRows.viewRows col.customer { width: 21%; }
+      .printRows.viewRows col.part { width: 15%; }
+      .printRows.viewRows col.capture { width: 13%; }
+      .printRows.viewRows col.department { width: 15%; }
       .printRows.viewRows col.qty { width: 8%; }
-      .printRows.viewRows col.powder { width: 16%; }
-      .printRows.viewRows col.masked { width: 10%; }
+      .printRows.viewRows col.powder { width: 11%; }
+      .printRows.viewRows col.masked { width: 6%; }
 
       @media (max-width: 760px) {
         .topbar {
@@ -689,8 +690,9 @@
                 <th><button class="headBtn" data-sort-key="status" type="button">Status<span class="sortMark"></span></button></th>
                 <th><button class="headBtn" data-sort-key="customer" type="button">Customer<span class="sortMark"></span></button></th>
                 <th><button class="headBtn" data-sort-key="partNumber" type="button">Part Number<span class="sortMark"></span></button></th>
-                <th><button class="headBtn" data-sort-key="dateReceived" type="button">Date Received<span class="sortMark"></span></button></th>
-                <th><button class="headBtn" data-sort-key="quantity" type="button">Qty<span class="sortMark"></span></button></th>
+                <th><button class="headBtn" data-sort-key="dateReceived" type="button">Capture Date<span class="sortMark"></span></button></th>
+                <th><button class="headBtn" data-sort-key="process" type="button">Last Signed Department<span class="sortMark"></span></button></th>
+                <th><button class="headBtn" data-sort-key="quantity" type="button">Quantity Unloaded<span class="sortMark"></span></button></th>
                 <th><button class="headBtn" data-sort-key="powder" type="button">Powder<span class="sortMark"></span></button></th>
                 <th><button class="headBtn" data-sort-key="maskedStatus" type="button">Masked<span class="sortMark"></span></button></th>
               </tr>
@@ -741,6 +743,7 @@
             quantity: '64',
             powder: 'YN1117 MED GL BLK',
             dateReceived: '4/23/2026',
+            process: 'E-Coat',
             dueDate: '5/3/2026',
             maskedStatus: 'Masked',
             reviewStatus: '',
@@ -755,6 +758,7 @@
             quantity: '90',
             powder: 'YN1117 MED GL BLK',
             dateReceived: '4/22/2026',
+            process: 'E-Coat',
             dueDate: '5/2/2026',
             maskedStatus: '',
             reviewStatus: 'Needs Review',
@@ -769,6 +773,7 @@
             quantity: '450',
             powder: 'YN1117 MED GL BLK',
             dateReceived: '4/27/2026',
+            process: 'Prehang',
             dueDate: '5/7/2026',
             maskedStatus: '',
             reviewStatus: '',
@@ -783,6 +788,7 @@
             quantity: '128',
             powder: 'YN1117 MED GL BLACK',
             dateReceived: '5/6/2026',
+            process: 'Masking',
             dueDate: '5/16/2026',
             maskedStatus: 'Masked',
             reviewStatus: '',
@@ -1169,7 +1175,8 @@
               <col class="status">
               <col class="customer">
               <col class="part">
-              <col class="received">
+              <col class="capture">
+              <col class="department">
               <col class="qty">
               <col class="powder">
               <col class="masked">
@@ -1179,8 +1186,9 @@
                 <th>Status</th>
                 <th>Customer</th>
                 <th>Part Number</th>
-                <th>Date Received</th>
-                <th>Qty</th>
+                <th>Capture Date</th>
+                <th>Last Signed Department</th>
+                <th>Quantity Unloaded</th>
                 <th>Powder</th>
                 <th>Masked</th>
               </tr>
@@ -1199,6 +1207,7 @@
             <td>${escapeHtml(row.customer)}</td>
             <td>${escapeHtml(row.partNumber)}</td>
             <td>${escapeHtml(row.dateReceived)}</td>
+            <td>${escapeHtml(row.process)}</td>
             <td>${escapeHtml(row.quantity)}</td>
             <td>${escapeHtml(row.powder)}</td>
             <td>${row.maskedStatus ? 'Masked' : ''}</td>
@@ -1293,7 +1302,7 @@
             state.filter === 'all' ||
             row.status === state.filter ||
             (state.filter === 'review' && row.reviewStatus);
-          const haystack = [row.customer, row.partNumber, row.powder, row.maskedStatus].join(' ').toLowerCase();
+          const haystack = [row.customer, row.partNumber, row.dateReceived, row.process, row.powder, row.maskedStatus].join(' ').toLowerCase();
           return matchesFilter && haystack.includes(query);
         });
         const sorted = sortRows(filtered);
@@ -1322,6 +1331,7 @@
             <td>${cellText(row.customer)}</td>
             <td>${cellText(row.partNumber)}</td>
             <td>${cellText(row.dateReceived)}</td>
+            <td>${cellText(row.process)}</td>
             <td>${cellText(row.quantity)}</td>
             <td>${cellText(row.powder)}</td>
             <td>${row.maskedStatus ? '<span class="pill">Masked</span>' : ''}</td>
