@@ -93,7 +93,7 @@ function getDashboardState() {
     floorUrl: getSpreadsheet_().getUrl() + '#gid=' + getFloorSheet_().getSheetId(),
     readerStatus: getReaderStatus(),
     counts: buildCounts_(rows),
-    rows: rows.slice(0, 300)
+    rows
   };
 }
 
